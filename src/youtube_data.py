@@ -3,10 +3,9 @@ import json
 import requests
 from collections import OrderedDict
 
-
 class Youtube_data:
     def __init__(self):
-        self.api_key= "your key"
+        self.api_key = "AIzaSyBy7g1ogoE72VVlFwiBYVD2L-bOnASbZIk"
         self.video_location = "https://www.youtube.com/watch?v="
         self.api_url = "https://www.googleapis.com/youtube/v3/"
         self.api_search = "search?key={}".format(self.api_key)
@@ -23,10 +22,13 @@ class Youtube_data:
         self.__set_search_count(query) 
         self.__check_options(query)
         self.__add_topic(query)
-        return self.api_url
+        hold = self.api_url
+        self.api_url = "https://www.googleapis.com/youtube/v3/"
+        return hold
 
 
-    def get_video_info_url(self, video_id): 
+    def get_video_info_url(self, video_id):
+        self.api_url = "https://www.googleapis.com/youtube/v3/"
         return "{}{}&part=contentDetails,statistics,snippet&id={}".format(
             self.api_url, self.api_video_info, video_id)
 
@@ -44,25 +46,72 @@ class Youtube_data:
             count += 1
         return info
 
-    def sort(self, arg, info):
+    def sort(self, arg, rank_setting, info):
+        if arg == "likes":
+            sorted_info, hold_info = self.__sort_by_likes(info)
+            return self.__order_search_info(
+                rank_setting , sorted_info, hold_info)
+        return False
+
+    def search(self, topics, filters, count = 1): # default 1 video per topic
+        ids = []
+        if not topics:
+            return {"error": "topics required"}
+        return self.__locate_based_on_topics(topics, count, ids, filters)
+                   
+    # private functions 
+    def __locate_based_on_topics(self, topics, count, ids, filters):
+        for topic in topics:
+            url = self.get_search_url({
+                # change here to change defaults
+                "topic": topic, 
+                "order": "relevance",
+                "maxResults": count
+            })
+            req = requests.get(url)
+            req = req.json()      
+            search_ids = self.get_search_ids(req)
+            ids = ids + search_ids
+
+        videoInfo = self.get_videos_info(ids)
+        return self.__do_filter_stuff(filters, videoInfo)
+    
+    def __do_filter_stuff(self, filters, videoInfo):
+        urls = []
+        if "likes" in filters:
+            videoInfo = self.sort("likes", filters['likes'], videoInfo)
+        for x in videoInfo:
+            urls.append(self.video_location + videoInfo[x]['id'])
+        return urls[::-1]
+
+    def __get_order_structure_info(self, info, setting):
+        count = len(info) if setting == "most" else 1
+        direction  = "up" if count == 1 else "down"
+        return count, direction
+
+    def __order_search_info(self,setting, info, hold): 
+        count, direction = self.__get_order_structure_info(
+            info, setting)
+        return self.__put_search_in_order(
+            info, hold, count, direction)
+
+    def __put_search_in_order(self, info, hold, count, direction):
+        new_info = {}
+        for x in info:
+            new_info[str(count)] = hold[x]
+            if direction == "up":
+                count += 1
+            else:
+                count -= 1
+        return new_info
+
+    def __sort_by_likes(self, info):
         likes = {}
         hold = {}
-
         for x in info:
             likes[info[x]['id']] = info[x]['statistics']['likeCount']
             hold[info[x]['id']] = info[x]
-
-        umm = OrderedDict(sorted(likes.items(), key=lambda t: t[1]))
-            
-        count = len(umm)
-        new_info = {}
-        for x in umm:
-            new_info[str(count)] = hold[x]
-            count -= 1
-
-        return new_info
-
-    # private functions 
+        return OrderedDict(sorted(likes.items(), key=lambda t: t[1])), hold
 
     def __pull_video_info(self,id):
         url = self.get_video_info_url(id)

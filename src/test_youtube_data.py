@@ -7,8 +7,7 @@ class Test_Youtube_Data(unittest.TestCase):
 
     def setUp(self):
         self.youtube_data = Youtube_data();
-        self.youtube_key = "your key"
-
+        self.youtube_key = "AIzaSyBy7g1ogoE72VVlFwiBYVD2L-bOnASbZIk"
 
     def tearDown(self):
         pass
@@ -290,7 +289,7 @@ class Test_Youtube_Data(unittest.TestCase):
 	      }
 	    }
         # print "{}".format(info["1"])
-        self.assertEqual(old_answer["1"]['id'], info["1"]["id"])
+        self.assertEqual(old_answer["1"]['id'], info["1"]['id'])
         
     def test_get_all_video_info_with_two_ids(self):
         info = self.youtube_data.get_videos_info(['sG4lZU1iPpE', 'MVQWfur6-qk'])
@@ -312,7 +311,7 @@ class Test_Youtube_Data(unittest.TestCase):
                 }  
             }
         }
-        rank = self.youtube_data.sort("likes",info);
+        rank = self.youtube_data.sort("likes", "most", info);
         self.assertEqual('sG4lZU1iPpE', rank["1"]["id"])
         self.assertEqual('MVQWfur6-qk', rank["2"]["id"])
 
@@ -332,10 +331,62 @@ class Test_Youtube_Data(unittest.TestCase):
                 }  
             }
         }
-        rank = self.youtube_data.sort("likes",info);
+        rank = self.youtube_data.sort("likes", "most", info);
         self.assertEqual('sG4lZU1iPpE', rank["2"]["id"])
         self.assertEqual('MVQWfur6-qk', rank["1"]["id"])
 
+    def test_get_all_video_likes_rank_2_least(self):
+        info  = {
+            "1": {
+                "id": "sG4lZU1iPpE",
+                "statistics":{
+                    "likeCount":"2"
+                }    
+            },
+            "2": {
+                "id": "MVQWfur6-qk",
+                "statistics":{
+                    "likeCount":"6"
+                }  
+            }
+        }
+        rank = self.youtube_data.sort("likes", "least", info);
+        self.assertEqual('sG4lZU1iPpE', rank["1"]["id"])
+        self.assertEqual('MVQWfur6-qk', rank["2"]["id"])
+
+
+    def test_main_feature_no_topics(self):
+        topics = []
+        count = 1
+        filters = {"likes": "most"}
+        videos_found = self.youtube_data.search(
+            topics,filters, count)
+        self.assertEqual(videos_found,{'error':"topics required"})
+
+    def test_main_feature(self):
+        topics = ['nba']
+        count = 1
+        filters = {"likes": "most"}
+        videos_found = self.youtube_data.search(
+            topics,filters, count) 
+        self.assertEqual(len(videos_found), 1)
+
+    def test_main_feature_2_count(self):
+        topics = ['nfl']
+        count = 1
+        filters = {"likes": "most"}
+        videos_found = self.youtube_data.search(
+            topics,filters, count)
+        self.assertEqual(len(videos_found), 1)
+
+    def test_main_feature_2_topicst(self):
+        topics = ['nba', 'nfl']
+        count = 1
+        filters = {"likes": "most"}
+        videos_found = self.youtube_data.search(
+            topics,filters, count)
+        # [nba video, nfl video]
+        self.assertEqual(len(videos_found), 2)
 
 if __name__ == "__main__":
     unittest.main()
